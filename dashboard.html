@@ -123,40 +123,48 @@ async function apiFetch(path, options = {}) {
     const apiUrl = (path) => `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
 
     const apiRequest = async (path, options = {}) => {
-      const response = await fetch(apiUrl(path), {
+     
+const apiRequest = async (path, options = {}) => {
+    const response = await fetch(apiUrl(path), {
         ...options,
         headers: {
-          Accept: 'application/json',
-          ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-          ...(options.headers || {})
+            Accept: 'application/json',
+            ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+            ...(options.headers || {})
         }
-      });
+    });
 
-      const contentType = response.headers.get('content-type') || '';
-      const raw = await response.text();
-      let data = null;
+    const raw = await response.text();
+    let data = null;
 
-      if (raw) {
-        if (contentType.includes('application/json')) {
-          try {
+    if (raw.trim()) {
+        try {
+            // Parse the response body even if the Content-Type header is missing.
             data = JSON.parse(raw);
-          } catch (_) {
-            throw new Error(`Backend returned invalid JSON (${response.status}).`);
-          }
-        } else {
-          throw new Error(`Backend returned ${response.status} ${response.statusText} instead of JSON.`);
+        } catch (error) {
+            console.error('Backend returned non-JSON:', {
+                url: response.url,
+                status: response.status,
+                contentType: response.headers.get('content-type'),
+                body: raw.slice(0, 500)
+            });
+
+            throw new Error(
+                `Backend returned non-JSON (HTTP ${response.status}). Check the console for details.`
+            );
         }
-      }
+    }
 
-      if (!response.ok) {
+    if (!response.ok) {
         throw new Error(
-          (data && (data.message || data.error)) ||
-          `Request failed: ${response.status} ${response.statusText}`
+            (data && (data.message || data.error)) ||
+            `Request failed: ${response.status} ${response.statusText}`
         );
-      }
+    }
 
-      return data || {};
-    };
+    return data || {};
+};
+
     // Multilingual Translations Dictionary (EN, HI, MR)
     const dashboardI18n = {
       en: {
